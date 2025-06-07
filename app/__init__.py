@@ -1,46 +1,42 @@
-from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
-from flask_migrate import Migrate
-from flask_jwt_extended import JWTManager
+# Finalproject/app/__init__.py
+from flask import Flask, jsonify
 from dotenv import load_dotenv
-
 import os
 
-# define models outside of the main app code as a tool to talk to the DB, but connect it to the Flask app later
-# utility methods to manage and interact with the database.
-db = SQLAlchemy()
-# a database migration tool with Flask and SQLAlchemy 
-# track changes to database schema and help to apply those changes safely over time, without manually rewriting SQL scripts or losing data
-# track database schema changes over time without connect it tightly to the app during initial import
-# waits for your app and db to be linked.
-migrate = Migrate()
-# the tool for handling authentication and authorization in specific route which need to be protected
-# Protect routes that require authentication
-# Access user identity from the token
-# Add custom functionalitty (e.g. roles).
-jwt = JWTManager()
-
-# initializes Flask app and connect all components inside app/ together
-# loads .env file configurations (from config.py)
-# initializes extensions (SQLAlchemy, JWT, Migrate), and registers routes
-# register blueprints/routes from routes.py
+from .extensions import db, migrate, login_manager
+from .models import User
+from routes.auth import auth_bp
 
 def create_app():
-    load_dotenv()  # load .env file
+    load_dotenv()
 
     app = Flask(__name__)
-    app.config.from_object('config.Config')  # load 'Config' class from config.py
+    app.config.from_object('config.Config')
 
-    # Initialize extensions
     db.init_app(app)
     migrate.init_app(app, db)
-    jwt.init_app(app)
+    login_manager.init_app(app)
 
-    # Import and register blueprints here (later)
-    from .models import User, TrainingElement, Booking
-    @app.route('/ping')
+    app.register_blueprint(auth_bp)
+
+    @login_manager.user_loader
+    def load_user(user_id):
+        return User.query.get(int(user_id))
+
+    # ADD THIS LINE FOR DEBUGGING
+    print(f"DEBUG: Type of 'app' before routes: {type(app)}")
+
+    @app.route('/ping') # This is the line that's causing the error
     def ping():
         return {'message': 'pong'}, 200
 
-    return app
+    @app.route('/debug/routes')
+    def debug_routes():
+        output = []
+        for rule in app.url_map.iter_rules():
+            methods = ','.join(rule.methods - {'HEAD', 'OPTIONS'})
+            line = f"Endpoint: {rule.endpoint} | Methods: {methods} | URL: {rule.rule}"
+            output.append(line)
+        return jsonify(output)
 
+    return app

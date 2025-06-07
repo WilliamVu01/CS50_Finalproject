@@ -1,11 +1,10 @@
-from app import db
+from .extensions import db
 from datetime import datetime
-from flask_sqlalchemy import SQLAlchemy
-
+from flask_login import UserMixin
 
 # --- User Model ---
 # User (id, email, password_hash, first_name, last_name, role: admin/instructor/student, created_at, updated_at)
-class User(db.Model):
+class User(db.Model, UserMixin):
     __tablename__ = 'users'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -17,12 +16,9 @@ class User(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    # Relationships
-    # bookings_as_instructor is a list of class that a instructor teach
-    # the instructor's list of classes to automatically include that class session
-    bookings_as_instructor = db.relationship('Booking', foreign_keys='Booking.instructor_id', back_populates='instructor')
-     # bookings_as_student is a list of class that a student enroll
-    bookings_as_student = db.relationship('Booking', foreign_keys='Booking.student_id', back_populates='student')
+    def get_id(self):
+        return str(self.id)
+
 
 # --- Training Element Model ---
 # TrainingElement (id, name, description, duration_minutes, session_type, material_link, created_at, updated_at)

@@ -1,6 +1,7 @@
 # Finalproject/routes/auth.py
 from flask import request, jsonify, Blueprint
-from werkzeug.security import generate_password_hash
+from flask_login import login_user, logout_user, login_required
+from werkzeug.security import generate_password_hash, check_password_hash
 from app.models import User # This import remains correct
 from app.extensions import db # <--- Import db from extensions
 
@@ -24,3 +25,19 @@ def register():
     db.session.add(user)
     db.session.commit()
     return jsonify({'msg':'User register successfully'}), 201
+
+@auth_bp.route('/auth/login', methods=["POST"])
+def login():
+    data = request.get_json()
+    user = User.query.filter_by(email=data['email']).first()
+    
+    if not user or not check_password_hash(user.password_hash, data['password']):
+        return jsonify({'msg':'Invalid incredential'}), 401
+    login_user(user)
+    return jsonify({'msg':'Login successfully', 'user':user.email})
+
+@auth_bp.route('/auth/logout', methods=["POST"])
+@login_required
+def logout():
+    logout_user()
+    return jsonify({'msg':'Logout successfully'})

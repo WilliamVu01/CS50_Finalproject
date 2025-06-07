@@ -1,9 +1,9 @@
-from .extensions import db
+# Finalproject/app/models.py
 from datetime import datetime
 from flask_login import UserMixin
+from .extensions import db # Ensure this is correct
 
 # --- User Model ---
-# User (id, email, password_hash, first_name, last_name, role: admin/instructor/student, created_at, updated_at)
 class User(db.Model, UserMixin):
     __tablename__ = 'users'
 
@@ -16,12 +16,23 @@ class User(db.Model, UserMixin):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+    # Relationships on User model
+    # Use string literals for 'Booking' to avoid early resolution issues
+    bookings_as_instructor = db.relationship(
+        'Booking', # Use string literal for the class name
+        foreign_keys='Booking.instructor_id', # String literal is fine here
+        back_populates='instructor'
+    )
+    bookings_as_student = db.relationship(
+        'Booking', # Use string literal for the class name
+        foreign_keys='Booking.student_id', # String literal is fine here
+        back_populates='student'
+    )
+
     def get_id(self):
         return str(self.id)
 
-
 # --- Training Element Model ---
-# TrainingElement (id, name, description, duration_minutes, session_type, material_link, created_at, updated_at)
 class TrainingElement(db.Model):
     __tablename__ = 'training_elements'
 
@@ -34,12 +45,10 @@ class TrainingElement(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    # Relationship
-    # declare relationship with "bookings" table 
+    # Relationship on TrainingElement
     bookings = db.relationship('Booking', back_populates='training_element')
 
 # --- Booking Model ---
-# Booking (id, training_element_id, start_time, end_time, instructor_id, student_id, created_at, updated_at)
 class Booking(db.Model):
     __tablename__ = 'bookings'
 
@@ -52,8 +61,18 @@ class Booking(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    # Relationships
-    # Relationship with "users" table
-    training_element = db.relationship('TrainingElement', back_populates='bookings')
-    instructor = db.relationship('User', foreign_keys=[instructor_id], back_populates='bookings_as_instructor')
-    student = db.relationship('User', foreign_keys=[student_id], back_populates='bookings_as_student')
+    # Relationships on Booking
+    training_element = db.relationship(
+        'TrainingElement', # Use string literal
+        back_populates='bookings'
+    )
+    instructor = db.relationship(
+        'User', # Use string literal
+        foreign_keys=[instructor_id], # Keep as list of column objects for clarity and correctness
+        back_populates='bookings_as_instructor'
+    )
+    student = db.relationship(
+        'User', # Use string literal
+        foreign_keys=[student_id], # Keep as list of column objects
+        back_populates='bookings_as_student'
+    )

@@ -8,7 +8,15 @@ from .models import User
 from routes.auth import auth_bp
 
 def create_app():
+
+    # Load env variables to app
     load_dotenv()
+
+
+    # initializes Flask app and connect all components inside app/ together
+    # loads .env file configurations (from config.py)
+    # initializes extensions (SQLAlchemy, Flask-Login, Migrate), and registers routes
+    # register blueprints/routes from routes.py
 
     app = Flask(__name__)
     app.config.from_object('config.Config')

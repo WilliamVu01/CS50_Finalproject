@@ -1,11 +1,12 @@
-# Finalproject/app/__init__.py
 from flask import Flask, jsonify
 from dotenv import load_dotenv
 import os
 
+# Import relevant function/routes into Flask app
 from .extensions import db, migrate, login_manager
 from .models import User
 from routes.auth import auth_bp
+from routes.admin import admin_bp
 
 def create_app():
 
@@ -25,14 +26,13 @@ def create_app():
     migrate.init_app(app, db)
     login_manager.init_app(app)
 
+    # Register Blueprint for route
     app.register_blueprint(auth_bp)
+    app.register_blueprint(admin_bp)
 
     @login_manager.user_loader
     def load_user(user_id):
         return User.query.get(int(user_id))
-
-    # ADD THIS LINE FOR DEBUGGING
-    print(f"DEBUG: Type of 'app' before routes: {type(app)}")
 
     @app.route('/ping') # This is the line that's causing the error
     def ping():

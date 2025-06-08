@@ -2,6 +2,7 @@
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_login import LoginManager
+from flask_bcrypt import Bcrypt
 
 # define models outside of the main app code as a tool to talk to the DB, but connect it to the Flask app later
 # utility methods to manage and interact with the database.
@@ -20,3 +21,7 @@ migrate = Migrate()
 # Access user identity from the token
 
 login_manager = LoginManager()
+
+# the tools for handling password hash and check passwords
+# Initialize here for connect to app
+bcrypt = Bcrypt()

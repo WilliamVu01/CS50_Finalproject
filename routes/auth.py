@@ -7,7 +7,7 @@ from app.extensions import db # <--- Import db from extensions
 
 auth_bp = Blueprint("auth_bp", __name__)
 
-@auth_bp.route('/auth/register', methods=["POST"])
+@auth_bp.route('/register', methods=["POST"])
 def register():
     data = request.get_json()
     if User.query.filter_by(email=data["email"]).first():
@@ -26,7 +26,7 @@ def register():
     db.session.commit()
     return jsonify({'msg':'User register successfully'}), 201
 
-@auth_bp.route('/auth/login', methods=["POST"])
+@auth_bp.route('/login', methods=["POST"])
 def login():
     data = request.get_json()
     user = User.query.filter_by(email=data['email']).first()
@@ -36,7 +36,7 @@ def login():
     login_user(user)
     return jsonify({'msg':'Login successfully', 'user':user.email})
 
-@auth_bp.route('/auth/logout', methods=["POST"])
+@auth_bp.route('/logout', methods=["POST"])
 @login_required
 def logout():
     logout_user()

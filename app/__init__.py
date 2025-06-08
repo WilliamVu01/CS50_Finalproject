@@ -12,8 +12,9 @@ load_dotenv()
 # Import extensions and models/blueprints
 from .extensions import db, migrate, login_manager, bcrypt
 from .models import User # User model is imported here to be accessible for user_loader
-from routes.auth import auth_bp # CORRECTED to direct import: from routes.auth
-from routes.admin import admin_bp # CORRECTED to direct import: from routes.admin
+from routes.auth import auth_bp 
+from routes.admin import admin_bp
+from routes.users import users_bp
 
 # The create_app function now accepts a config_object argument.
 # This allows you to pass different configuration classes (e.g., DevelopmentConfig, TestingConfig)
@@ -53,6 +54,7 @@ def create_app(config_object='config.DevelopmentConfig'): # ADDED config_object 
     # For example, auth routes will be under /api/auth (e.g., /api/auth/login).
     app.register_blueprint(auth_bp, url_prefix='/api/auth') # ADDED url_prefix
     app.register_blueprint(admin_bp, url_prefix='/api/admin') # ADDED url_prefix
+    app.register_blueprint(users_bp, url_prefix='/api/users') # ADDED url_prefix
 
     # Example: Register other blueprints as they are created
     # from routes.users import users_bp # Example: from routes.users if users.py is in Finalproject/routes

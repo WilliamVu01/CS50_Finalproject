@@ -70,7 +70,7 @@ def get_user_by_id(user_id): # get_userinfo_by_id function receive 'user_id' as 
         print(f"Error fetching user's information: {e}")
         return jsonify(message="Internal sever error", error=str(e)), 500
 # Update user information using PUT (not using PATCH sinc PUT coudl cover all scope)
-@users_bp.route('/<int:user_id', methods=["PUT"])    
+@users_bp.route('/<int:user_id>', methods=["PUT"])    
 def update_user_by_id(user_id):
     
     try:
@@ -121,7 +121,7 @@ def update_user_by_id(user_id):
         print(f"Error in updating user's information: {e}")
         return jsonify(message="Internal server error", error=str(e)), 500
 # Enable the capability for a 'admin' only to delete user if no longer need (DELETE)
-@users_bp.route('/<int:user_id', methods=["DELETE"])
+@users_bp.route('/<int:user_id>', methods=["DELETE"])
 @login_required
 @roles_required('admin')
 def delete_user_by_id(user_id):

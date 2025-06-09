@@ -15,6 +15,7 @@ from .models import User # User model is imported here to be accessible for user
 from routes.auth import auth_bp 
 from routes.admin import admin_bp
 from routes.users import users_bp
+from routes.training_elements import training_elements_bp
 
 # The create_app function now accepts a config_object argument.
 # This allows you to pass different configuration classes (e.g., DevelopmentConfig, TestingConfig)
@@ -55,6 +56,7 @@ def create_app(config_object='config.DevelopmentConfig'): # ADDED config_object 
     app.register_blueprint(auth_bp, url_prefix='/api/auth') # ADDED url_prefix
     app.register_blueprint(admin_bp, url_prefix='/api/admin') # ADDED url_prefix
     app.register_blueprint(users_bp, url_prefix='/api/users') # ADDED url_prefix
+    app.register_blueprint(training_elements_bp, url_prefix='/api/training_elements') # ADDED url_prefix
 
     # Example: Register other blueprints as they are created
     # from routes.users import users_bp # Example: from routes.users if users.py is in Finalproject/routes

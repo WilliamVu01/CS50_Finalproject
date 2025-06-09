@@ -1,7 +1,8 @@
 # Finalproject/app/models.py
 from datetime import datetime
 from flask_login import UserMixin
-from .extensions import db # Ensure this is correct
+from .extensions import db 
+import uuid # Import uuid for default ID generation
 
 # --- User Model ---
 class User(db.Model, UserMixin):
@@ -40,7 +41,7 @@ class TrainingElement(db.Model):
     name = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text)
     duration_minutes = db.Column(db.Integer)
-    session_type = db.Column(db.String(50))
+    session_type = db.Column(db.Enum('classroom', 'hands_on', 'e_learning', 'assessment', name='session_types'))
     material_link = db.Column(db.String(255))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

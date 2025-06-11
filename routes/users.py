@@ -6,8 +6,10 @@ from app.models import User
 
 users_bp = Blueprint("users_bp", __name__)
 print(f"DEBUG: users_bp is initialized with name: {users_bp.name}")
+
 # SQLAlchemy objects are not directly JSON serializable.
-# need to convert each User object into a dictionary (or a similar serializable format) first
+# Need to convert each User object into a dictionary (or a similar serializable format) first
+# User (id, email, password_hash, first_name, last_name, role: admin/instructor/student, created_at, updated_at)
 def serialize_user(user):
     """
     Serializes a User SQLAlchemy object into a dictionary for JSON response.
@@ -63,7 +65,7 @@ def get_user_by_id(user_id): # get_userinfo_by_id function receive 'user_id' as 
         if current_user.role != 'admin' and current_user.id != user_id:
             return jsonify(message="You can only view your own profile unless you are a admin"), 403
         
-        return jsonify([serialize_user(user)]), 200
+        return jsonify(serialize_user(user)), 200
     except Exception as e:
         # discards all the staged changes and reverts the database to the state it was in before the transaction began.
         db.session.rollback()
@@ -94,8 +96,8 @@ def update_user_by_id(user_id):
             user.first_name = data['first_name']
         if 'last_name' in data:
             user.last_name = data['last_name']
-        if 'password' in data:
-            user.password_hash = bcrypt.generated_password_hash(data['password'])
+        if 'password' in data and data['password']:
+            user.password_hash = bcrypt.generate_password_hash(data['password']).decode('utf-8')
         # Update user's info with 'admin' access
         if 'role' in data:
             if current_user.role != 'admin':
@@ -129,7 +131,7 @@ def delete_user_by_id(user_id):
         user = User.query.get(user_id)
 
         if not user:
-            return jsonify("User not found"), 404
+            return jsonify(message="User not found"), 404
         # Prevent a admin delete itself
         if current_user.id == user_id:
             return jsonify("You cannot delete yourself as a admin"), 400
@@ -142,4 +144,4 @@ def delete_user_by_id(user_id):
         # discards all the staged changes and reverts the database to the state it was in before the transaction began.
         db.session.rollback()
         print(f"Error deleting user: {e}")
-        return jsonify(message=" Internal server error", error=str(e)), 500
+        return jsonify(message="Internal server error", error=str(e)), 500

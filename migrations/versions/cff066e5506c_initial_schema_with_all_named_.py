@@ -1,8 +1,8 @@
-"""Reinitialize schema
+"""Initial schema with all named constraints
 
-Revision ID: 751caa336719
+Revision ID: cff066e5506c
 Revises: 
-Create Date: 2025-06-09 10:16:26.045976
+Create Date: 2025-06-10 11:33:54.953391
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '751caa336719'
+revision = 'cff066e5506c'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -22,12 +22,13 @@ def upgrade():
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('name', sa.String(length=100), nullable=False),
     sa.Column('description', sa.Text(), nullable=True),
-    sa.Column('duration_minutes', sa.Integer(), nullable=True),
-    sa.Column('session_type', sa.String(length=50), nullable=True),
+    sa.Column('duration_minutes', sa.Integer(), nullable=False),
+    sa.Column('session_type', sa.Enum('classroom', 'hands_on', 'e_learning', 'assessment', name='session_types'), nullable=False),
     sa.Column('material_link', sa.String(length=255), nullable=True),
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.Column('updated_at', sa.DateTime(), nullable=True),
-    sa.PrimaryKeyConstraint('id')
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('name')
     )
     op.create_table('users',
     sa.Column('id', sa.Integer(), nullable=False),
@@ -43,13 +44,17 @@ def upgrade():
     )
     op.create_table('bookings',
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('training_element_id', sa.Integer(), nullable=True),
+    sa.Column('training_element_id', sa.Integer(), nullable=False),
     sa.Column('instructor_id', sa.Integer(), nullable=True),
     sa.Column('student_id', sa.Integer(), nullable=True),
-    sa.Column('start_time', sa.DateTime(), nullable=True),
-    sa.Column('end_time', sa.DateTime(), nullable=True),
+    sa.Column('start_time', sa.DateTime(), nullable=False),
+    sa.Column('end_time', sa.DateTime(), nullable=False),
+    sa.Column('status', sa.Enum('pending', 'confirmed', 'completed', 'cancelled', name='booking_statuses'), nullable=False),
+    sa.Column('created_by_user_id', sa.Integer(), nullable=False),
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.Column('updated_at', sa.DateTime(), nullable=True),
+    sa.Column('notes', sa.Text(), nullable=True),
+    sa.ForeignKeyConstraint(['created_by_user_id'], ['users.id'], ),
     sa.ForeignKeyConstraint(['instructor_id'], ['users.id'], ),
     sa.ForeignKeyConstraint(['student_id'], ['users.id'], ),
     sa.ForeignKeyConstraint(['training_element_id'], ['training_elements.id'], ),

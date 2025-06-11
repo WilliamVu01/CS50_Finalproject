@@ -1,14 +1,21 @@
 from flask import Blueprint, request, jsonify
-from flask_login import login_required, current_user
+from flask_login import login_required
 
-from app.extensions import db, bcrypt
+from app.extensions import db
 from itls.decorators import roles_required
 from app.models import TrainingElement
 
 training_elements_bp = Blueprint("training_elements_bp",__name__)
-print(f"DEBUG: training_elements_bp is initialized successfully with name: {training_elements_bp}")
+
+print(f"DEBUG: training_elements_bp is initialized  with name: {training_elements_bp.name}")
+
+# ----Overall----
+# Any loggined user can retrieve training elements
+# Only 'instructor' can perform "create" , "update"  & "delete" training elements
+
 
 # Function for serializing training elements
+# TrainingElement (id, name, description, duration_minutes, session_type, material_link, created_at, updated_at)
 def serialize_training_elements(training_element):
     return {
         'id': training_element.id,
@@ -149,7 +156,7 @@ def delete_training_element_by_id(element_id):
             return jsonify(message="Training element not found"), 404
         db.session.delete(training_element)
         db.session.commit()
-        return jsonify(message="Training element deleted successfully"), 204 # Server completed successfully but not return any content
+        return jsonify(message=f"Training element with id {element_id} deleted successfully"), 204 # Server completed successfully but not return any content
     except Exception as e:
         db.session.rollback()
         print(f"Error fetching training element infor")

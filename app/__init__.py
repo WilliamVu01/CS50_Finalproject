@@ -8,14 +8,10 @@ from flask_cors import CORS
 # Load environment variables early, before app creation.
 # This ensures they are available for configuration.
 load_dotenv()
-
-# Import extensions and models/blueprints
+# Import extensions and models
 from .extensions import db, migrate, login_manager, bcrypt
 from .models import User # User model is imported here to be accessible for user_loader
-from routes.auth import auth_bp 
-from routes.admin import admin_bp
-from routes.users import users_bp
-from routes.training_elements import training_elements_bp
+
 
 # The create_app function now accepts a config_object argument.
 # This allows you to pass different configuration classes (e.g., DevelopmentConfig, TestingConfig)
@@ -50,14 +46,23 @@ def create_app(config_object='config.DevelopmentConfig'): # ADDED config_object 
     def unauthorized():
         return jsonify(message="Unauthorized: Login required."), 401
 
+
+    # Import extensions and models
+    from routes.auth import auth_bp 
+    from routes.admin import admin_bp
+    from routes.users import users_bp
+    from routes.training_elements import training_elements_bp
+    from routes.bookings import bookings_bp
+
     # Register Blueprints for your API routes with URL prefixes.
     # Using url_prefix is a best practice for organizing API endpoints and preventing conflicts.
     # For example, auth routes will be under /api/auth (e.g., /api/auth/login).
     app.register_blueprint(auth_bp, url_prefix='/api/auth') # ADDED url_prefix
-    app.register_blueprint(admin_bp, url_prefix='/api/admin') # ADDED url_prefix
-    app.register_blueprint(users_bp, url_prefix='/api/users') # ADDED url_prefix
-    app.register_blueprint(training_elements_bp, url_prefix='/api/training_elements') # ADDED url_prefix
-
+    app.register_blueprint(admin_bp, url_prefix='/api/admin')
+    app.register_blueprint(users_bp, url_prefix='/api/users')
+    app.register_blueprint(training_elements_bp, url_prefix='/api/training_elements')
+    app.register_blueprint(bookings_bp, url_prefix='/api/bookings') 
+    
     # Example: Register other blueprints as they are created
     # from routes.users import users_bp # Example: from routes.users if users.py is in Finalproject/routes
     # app.register_blueprint(users_bp, url_prefix='/api/users')

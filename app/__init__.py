@@ -4,6 +4,7 @@ import os
 from flask import Flask, jsonify
 from dotenv import load_dotenv # Import load_dotenv
 from flask_cors import CORS
+from werkzeug.exceptions import BadRequest, Unauthorized, Forbidden, NotFound, InternalServerError
 
 # Load environment variables early, before app creation.
 # This ensures they are available for configuration.
@@ -33,21 +34,66 @@ def create_app(config_object='config.DevelopmentConfig'): # ADDED config_object 
     CORS(app, supports_credentials=True, origins=["http://localhost:5173", "http://127.0.0.1:5173"])
 
     # Configure Flask-Login's user loader
-    # This function tells Flask-Login how to load a user from the database given their ID.
-    # IMPORTANT: User IDs are UUIDs (strings) in your models, so do NOT convert to int.
+
+
     @login_manager.user_loader
+        # user_loader function tells Flask-Login how to reload a user object from a user ID stored in the session.
+        # when a user successfully logs in , Flask-Login stores their unique ID in the session cookie.
     def load_user(user_id):
-        return User.query.get(user_id) # REMOVED int() cast
+        return User.query.get(user_id) 
+        # This function tells Flask-Login how to load a user from the database given their ID.
+        # Pass it as a string from session to load_user
+    
+   # --- Centralized Error Handlers ---
+        # These handlers provide consistent JSON responses for various HTTP error codes.
+            #  easier for frontend (React) or other API consumer to parse and react to errors predictably.
+            # Improved User Experience (Frontend): When frontend receives a consistent JSON error, it can display meaningful messages to the user 
+        # Centralized handlers allow you to control exactly what information is returned in error messages:
+        #   # preventing sensitive details from leaking, especially in production environment
+        # Catch various types of errors: not just from your explicit if conditions, but from underlying Flask operations or other third-party libraries
+        # Prevents partial or corrupted data from being saved, maintaining database integrity.
+        # Note: Flask-Login's unauthorized_handler will still take precedence for errors
+    
+
+    @app.errorhandler(400)
+    def bad_request_error(error):
+        # Werkzeug's BadRequest exception (often raised by request.json if malformed)
+        # can carry a description. Use it if available, otherwise a generic message.
+        return jsonify(message=getattr(error, 'description', 'Bad Request: The server cannot process the request due to a client error.')), 400
+
+    @app.errorhandler(401)
+    def unauthorized_error(error):
+        # Catches 401s not handled by Flask-Login's specific unauthorized_handler
+        return jsonify(message=getattr(error, 'description', 'Unauthorized: Authentication required or invalid credentials.')), 401
+
+    @app.errorhandler(403)
+    def forbidden_error(error):
+        # Catches 403s raised by Flask or explicitly aborted in views/decorators
+        return jsonify(message=getattr(error, 'description', 'Forbidden: You do not have permission to access the requested resource.')), 403
+
+    @app.errorhandler(404)
+    def not_found_error(error):
+        # Catches 404s for non-existent URLs or resources
+        return jsonify(message=getattr(error, 'description', 'Not Found: The requested URL or resource was not found on the server.')), 404
+
+    @app.errorhandler(500)
+    def internal_server_error(error):
+        # Ensures a database rollback on any internal server error that propagates up
+        db.session.rollback()
+        return jsonify(message="Internal Server Error", error=str(error) if app.debug else "An unexpected error occurred"), 500
 
     # Configure Flask-Login's unauthorized handler for API requests.
-    # This is crucial for an API-only backend. Instead of redirecting to a login page,
-    # it returns a JSON response with a 401 Unauthorized status.
-    @login_manager.unauthorized_handler # ADDED unauthorized handler
+        # Prevent default redirect behavior from Flask-Login
+        # API request don't want a direct
+        # React app expects a JSON response with an appropriate HTTP status code so it can handle the error programmatically
+            # If  API redirects with an HTML response
+            # # Frontend JavaScript won't understand it, potentially leading to CORS errors or unexpected behavior.
+    @login_manager.unauthorized_handler 
     def unauthorized():
         return jsonify(message="Unauthorized: Login required."), 401
 
 
-    # Import extensions and models
+    # Import blueprint
     from routes.auth import auth_bp 
     from routes.admin import admin_bp
     from routes.users import users_bp
@@ -91,13 +137,5 @@ def create_app(config_object='config.DevelopmentConfig'): # ADDED config_object 
             line = f"Endpoint: {rule.endpoint} | Methods: {methods} | URL: {rule.rule}"
             output.append(line)
         return jsonify(output)
-
-    # Register a generic error handler for 500 (Internal Server Error).
-    # This provides a consistent JSON response for unhandled exceptions,
-    # and avoids leaking sensitive stack traces in production.
-    @app.errorhandler(500) # ADDED 500 error handler
-    def internal_server_error(e):
-        # In production, avoid sending full error details; just a generic message
-        return jsonify(message="Internal Server Error", error=str(e) if app.debug else "An unexpected error occurred"), 500
 
     return app

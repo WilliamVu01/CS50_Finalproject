@@ -25,7 +25,7 @@ class Config:
 class DevelopmentConfig(Config):
     DEBUG = True # Enable Flask debug mode
     # You might override database URL or other settings here if needed for dev
-    # SQLALCHEMY_DATABASE_URI = os.getenv("DEV_DATABASE_URL", f"sqlite:///{os.path.join(basedir, 'dev_schedulingapp.db')}")
+    SQLALCHEMY_DATABASE_URI = os.getenv("DEV_DATABASE_URL", f"sqlite:///{os.path.join(basedir, 'dev_schedulingapp.db')}")
 
 # Testing-specific configurations
 # This class would be used for running automated tests.

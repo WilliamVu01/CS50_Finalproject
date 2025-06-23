@@ -60,7 +60,7 @@ def create_app(config_object='config.DevelopmentConfig'): # ADDED config_object 
         # Werkzeug's BadRequest exception (often raised by request.json if malformed)
         # can carry a description. Use it if available, otherwise a generic message.
         return jsonify(message=getattr(error, 'description', 'Bad Request: The server cannot process the request due to a client error.')), 400
-
+    # Handle Flask-Login's direct authentication check from app's extension
     @app.errorhandler(401)
     def unauthorized_error(error):
         # Catches 401s not handled by Flask-Login's specific unauthorized_handler

@@ -1,5 +1,4 @@
 # Finalproject/app/models.py
-from datetime import datetime
 from flask_login import UserMixin
 from .extensions import db, bcrypt
 
@@ -58,12 +57,12 @@ class TrainingElement(db.Model):
     material_link = db.Column(db.String(255))
     created_at = db.Column(db.DateTime, default=db.func.now())
     updated_at = db.Column(db.DateTime, default=db.func.now(), onupdate=db.func.now())
-
+    # add created_by_user_idd in future
     # Relationship on TrainingElement
     bookings = db.relationship('Booking', back_populates='training_element')
 
 # --- Booking Model ---
-# Booking (id, training_element_id, start_time, end_time, instructor_id, student_id, created_at, updated_at)
+# Booking (id, training_element_id, start_time, end_time, instructor_id, student_id,created_by_user_id, created_at, updated_at)
 class Booking(db.Model):
     __tablename__ = 'bookings'
 

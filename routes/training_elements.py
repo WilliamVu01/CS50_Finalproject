@@ -7,7 +7,7 @@ from app.models import TrainingElement
 
 training_elements_bp = Blueprint("training_elements_bp",__name__)
 
-print(f"DEBUG: training_elements_bp is initialized  with name: {training_elements_bp.name}")
+print(f"DEBUG: training_elements_bp is initialized with name: {training_elements_bp.name}")
 
 # ----Overall----
 # Any loggined user can retrieve training elements

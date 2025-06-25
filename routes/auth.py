@@ -68,6 +68,7 @@ def register():
     db.session.commit()
     return jsonify({'message':'User registered successfully', 'user': serialize_user(user)}), 201
 
+
 @auth_bp.route('/login', methods=["POST"])
 def login():
     data = request.get_json()
@@ -90,6 +91,26 @@ def login():
 
 
     return jsonify({'message':'Login successful', 'user': serialize_user(user)}) 
+
+@auth_bp.route('/current_user', methods=["GET"]) 
+@login_required 
+def get_current_user():
+    """
+    GET /api/auth/current_user
+    Retrieves information about the currently logged-in user.
+    This endpoint is used by the frontend to check authentication status on page load/refresh
+    without requiring a full re-login.
+    """
+    try:
+        # current_user is a proxy provided by Flask-Login, representing the authenticated user.
+        # It's only available if @login_required decorator is used and a valid session exists.
+        return jsonify(serialize_user(current_user)), 200
+    except Exception as e:
+        print(f"Error fetching current user: {e}")
+        # If @login_required fails, Flask-Login's unauthorized_handler will typically catch it.
+        # This catch is for other unexpected errors if the decorator passes.
+        return jsonify(message="Internal server error", error=str(e)), 500
+
 
 @auth_bp.route('/logout', methods=["POST"])
 @login_required

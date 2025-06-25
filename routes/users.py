@@ -26,11 +26,11 @@ def serialize_user(user):
 # List all of user's detail (GET)
 @users_bp.route('/')
 @login_required # Requires user to login
-@roles_required('admin') # Requires 'admin' role to access this route
+@roles_required('admin', 'instructor') # Requires 'admin' & 'instructor' role to access this route
 def get_all_users():
     """
     GET /api/users
-    Retrive all users.  Granted to Admin role only
+    Retrive all users.  Granted to Admin & Instructor role
     """
     try:
         users = User.query.all()

@@ -1,8 +1,8 @@
-"""Initial schema with all named constraints
+"""initial_schema_rebuild
 
-Revision ID: cff066e5506c
+Revision ID: 63301d280311
 Revises: 
-Create Date: 2025-06-10 11:33:54.953391
+Create Date: 2025-06-24 07:31:57.285568
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'cff066e5506c'
+revision = '63301d280311'
 down_revision = None
 branch_labels = None
 depends_on = None

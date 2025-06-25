@@ -31,7 +31,7 @@ def create_app(config_object='config.DevelopmentConfig'): # ADDED config_object 
     # Configure CORS - allows your React frontend to make requests
     # Adjust origins as needed for production (e.g., your frontend domain)
     # The `supports_credentials=True` is important for session cookies with Flask-Login
-    CORS(app, supports_credentials=True, origins=["http://localhost:5173", "http://127.0.0.1:5173"])
+    CORS(app, supports_credentials=True, origins=["http://localhost:5173", "http://127.0.0.1:5000"])
 
     # Configure Flask-Login's user loader
 
@@ -103,20 +103,12 @@ def create_app(config_object='config.DevelopmentConfig'): # ADDED config_object 
     # Register Blueprints for your API routes with URL prefixes.
     # Using url_prefix is a best practice for organizing API endpoints and preventing conflicts.
     # For example, auth routes will be under /api/auth (e.g., /api/auth/login).
-    app.register_blueprint(auth_bp, url_prefix='/api/auth') # ADDED url_prefix
-    app.register_blueprint(admin_bp, url_prefix='/api/admin')
-    app.register_blueprint(users_bp, url_prefix='/api/users')
-    app.register_blueprint(training_elements_bp, url_prefix='/api/training_elements')
-    app.register_blueprint(bookings_bp, url_prefix='/api/bookings') 
+    app.register_blueprint(auth_bp, url_prefix='/api/auth', strict_slashes=False) # ADDED url_prefix
+    app.register_blueprint(admin_bp, url_prefix='/api/admin', strict_slashes=False)
+    app.register_blueprint(users_bp, url_prefix='/api/users', strict_slashes=False)
+    app.register_blueprint(training_elements_bp, url_prefix='/api/training_elements', strict_slashes=False)
+    app.register_blueprint(bookings_bp, url_prefix='/api/bookings', strict_slashes=False) 
     
-    # Example: Register other blueprints as they are created
-    # from routes.users import users_bp # Example: from routes.users if users.py is in Finalproject/routes
-    # app.register_blueprint(users_bp, url_prefix='/api/users')
-    # from routes.training_elements import training_elements_bp
-    # app.register_blueprint(training_elements_bp, url_prefix='/api/training-elements')
-    # from routes.bookings import bookings_bp
-    # app.register_blueprint(bookings_bp, url_prefix='/api/bookings')
-
     # Basic root route for testing server status
     @app.route('/')
     def index():

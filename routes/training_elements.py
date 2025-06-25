@@ -30,7 +30,7 @@ def serialize_training_elements(training_element):
 
 
 # View training elements for all user
-@training_elements_bp.route('/', methods=["GET"])
+@training_elements_bp.route('/', methods=["GET"], strict_slashes=False)
 def get_training_element():
     try:
         training_elements = TrainingElement.query.all()
@@ -44,7 +44,7 @@ def get_training_element():
 
 # Create new training element for admins/user
     # Requires 'name', 'description', 'duration_minutes', 'session_type'
-@training_elements_bp.route('/', methods=["POST"])
+@training_elements_bp.route('/', methods=["POST"], strict_slashes=False)
 @login_required
 @roles_required('admin', 'instructor')
 def create_training_element():
@@ -97,7 +97,7 @@ def create_training_element():
     
 # Manage training elements for instructors & admins
 # Retrieve training element information
-@training_elements_bp.route('/<int:element_id>', methods=["GET"])
+@training_elements_bp.route('/<int:element_id>', methods=["GET"], strict_slashes=False)
 @login_required
 @roles_required('admin', 'instructor')
 def get_training_element_by_id(element_id):
@@ -112,7 +112,7 @@ def get_training_element_by_id(element_id):
         return jsonify(message="Interal server error"), 500
     
 # Update training elements for Instructor only
-@training_elements_bp.route('/<int:element_id>', methods=["PUT"])
+@training_elements_bp.route('/<int:element_id>', methods=["PUT"], strict_slashes=False)
 @login_required
 @roles_required('instructor')
 def update_training_element_by_id(element_id):
@@ -146,7 +146,7 @@ def update_training_element_by_id(element_id):
         return jsonify(message="Interal server error"), 500
     
 # Delete training elements for Instructor only
-@training_elements_bp.route('/<int:element_id>', methods=["DELETE"])
+@training_elements_bp.route('/<int:element_id>', methods=["DELETE"], strict_slashes=False)
 @login_required
 @roles_required('instructor')
 def delete_training_element_by_id(element_id):

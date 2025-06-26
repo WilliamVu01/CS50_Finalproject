@@ -1,3 +1,4 @@
+// src/context/AuthContext.jsx
 import React, { useState, useEffect, createContext, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
@@ -15,37 +16,43 @@ export const AuthProvider = ({ children }) => {
   // defined in api.jsx (which then use the internal axios 'api' instance).
   const performLogin = async (email, password) => {
     try {
-      const response = await apiService.loginUser(email, password); // Use apiService.loginUser
-      return response; // apiService.loginUser already returns response.data
+      const response = await apiService.loginUser(email, password);
+      // apiService.loginUser already returns response.data
+      // Backend returns { message: "...", user: { id: ..., firstName: ..., role: ... } }
+      return response;
     } catch (error) {
-      throw error; // apiService.loginUser already throws the message
+      throw error;
     }
   };
 
   const performRegister = async (userData) => {
     try {
-      const response = await apiService.registerUser(userData); // Use apiService.registerUser
-      return response; // apiService.registerUser already returns response.data
+      const response = await apiService.registerUser(userData);
+      // apiService.registerUser already returns response.data
+      // Backend returns { message: "...", user: { id: ..., firstName: ..., role: ... } }
+      return response;
     } catch (error) {
-      throw error; // apiService.registerUser already throws the message
+      throw error;
     }
   };
 
   const performLogout = async () => {
     try {
-      const response = await apiService.logoutUser(); // Use apiService.logoutUser
-      return response; // apiService.logoutUser already returns response.data
+      const response = await apiService.logoutUser();
+      return response;
     } catch (error) {
-      throw error; // apiService.logoutUser already throws the message
+      throw error;
     }
   };
 
   const performGetCurrentUser = async () => {
     try {
-      const currentUser = await apiService.getCurrentUser(); // Use apiService.getCurrentUser
-      return currentUser; // apiService.getCurrentUser already returns user object or null
+      // apiService.getCurrentUser directly returns the serialized user object
+      // Backend returns { id: ..., firstName: ..., role: ... } directly for /current_user
+      const currentUser = await apiService.getCurrentUser();
+      return currentUser;
     } catch (error) {
-      throw error; // apiService.getCurrentUser already throws the message
+      throw error;
     }
   };
 
@@ -53,12 +60,15 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const currentUser = await performGetCurrentUser(); // Use the internal helper
-        if (currentUser) {
-          setUser(currentUser.user || currentUser); // Adjust based on if backend wraps user in 'user' key
+        const currentUserData = await performGetCurrentUser(); // This directly returns serialized user obj
+        console.log("Initial auth check: current user data:", currentUserData); // Debug log
+        if (currentUserData && currentUserData.id) { // Check if a valid user object was returned
+          setUser(currentUserData); // Set the user directly from the response
+        } else {
+          setUser(null); // No current user found or invalid data
         }
       } catch (error) {
-        // Error already logged by performGetCurrentUser or handled by toast if re-thrown
+        console.error("Initial auth check error:", error); // Debug log
         setUser(null);
       } finally {
         setIsAuthReady(true);
@@ -69,11 +79,13 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      const data = await performLogin(email, password);
-      setUser(data.user); // Assuming loginUser returns { user: {...}, message: "..." }
+      const data = await performLogin(email, password); // data is { message: "...", user: {...} }
+      console.log("Login successful, received data:", data); // Debug log
+      setUser(data.user); // Access the 'user' key from the response
       toast.success(data.message);
-      navigate('/'); // MINIMUM CHANGE: Changed from '/dashboard' to '/'
+      navigate('/');
     } catch (error) {
+      console.error("Login error:", error); // Debug log
       toast.error(error);
       throw error;
     }
@@ -86,6 +98,7 @@ export const AuthProvider = ({ children }) => {
       toast.success(data.message);
       navigate('/login');
     } catch (error) {
+      console.error("Logout error:", error); // Debug log
       toast.error(error);
       throw error;
     }
@@ -93,10 +106,14 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (userData) => {
     try {
-      const data = await performRegister(userData);
+      const data = await performRegister(userData); // data is { message: "...", user: {...} }
+      console.log("Register successful, received data:", data); // Debug log
+      setUser(data.user); // Set the user after successful registration and login (assuming backend logs in user)
       toast.success(data.message);
-      navigate('/login');
+      navigate('/'); // MINIMUM CHANGE: Changed from '/login' to '/' (assuming auto-login after register)
+      // If backend doesn't auto-login, keep '/login' and user won't be set until explicit login
     } catch (error) {
+      console.error("Register error:", error); // Debug log
       toast.error(error);
       throw error;
     }

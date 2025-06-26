@@ -6,12 +6,14 @@ import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import { toast } from 'react-hot-toast';
 
+// FIXED: Corrected import path for apiService
+import apiService from '../services/api';
 import BookingModal from '../components/Bookings/BookingModal'; // Import BookingModal
-import apiService from '../services/api'; // Import apiService to fetch real bookings
 import { useAuth } from '../context/AuthContext'; // Import useAuth to get user role
 
 function CalendarPage() {
-  const { user } = useAuth(); // Get the current user from AuthContext
+  // Get the current user, auth readiness, and login status from AuthContext
+  const { user, isAuthReady, isLoggedIn } = useAuth();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -25,46 +27,54 @@ function CalendarPage() {
     setLoading(true);
     setError(null);
     setNoBookingsMessage(''); // Clear previous no bookings message
+    console.log("Fetching bookings for user:", user); // Debug log
     try {
       // apiService.getBookings now handles camelCase to snake_case transformation for response.
-      const data = await apiService.getBookings(); 
-      
+      const data = await apiService.getBookings();
+      console.log("Fetched raw booking data (camelCase from apiService):", data); // Debug log
+
       let filteredData = data;
-      // Re-introducing optional client-side filtering logic for display purposes.
-      // This is a temporary solution if backend filtering isn't in place yet.
+      // Filter bookings based on user role if logged in
       if (user) {
         if (user.role === 'student') {
-          filteredData = data.filter(booking => booking.student_id === user.id);
+          filteredData = data.filter(booking => booking.studentId === user.id); // Use camelCase studentId
         } else if (user.role === 'instructor') {
-          filteredData = data.filter(booking => booking.instructor_id === user.id);
+          filteredData = data.filter(booking => booking.instructorId === user.id); // Use camelCase instructorId
         }
+        // Admin user sees all bookings (no additional filtering)
       }
+      console.log("Filtered booking data (after user role filter):", filteredData); // Debug log
+
 
       if (filteredData.length === 0) {
         if (user?.role === 'student') { // Use optional chaining for user
           setNoBookingsMessage("No training elements booked for you. Please consult your instructor or administrator.");
         } else if (user?.role === 'instructor') { // Use optional chaining for user
           setNoBookingsMessage("You have no training elements booked. Please arrange new bookings with your students.");
-        } else { // For admin or other roles
+        } else { // For admin or other roles, or if no user is logged in
           setNoBookingsMessage("No training elements have been booked yet.");
         }
         setEvents([]); // Ensure events array is empty
       } else {
         setNoBookingsMessage(''); // Clear message if bookings are found
-        // Map backend booking structure (now snake_case due to apiService transformation) to FullCalendar event structure
-        const formattedEvents = filteredData.map(booking => ({
-          id: booking.id,
-          title: booking.training_element_name || 'No Title', // Use snake_case
-          start: booking.start_time, // Use snake_case
-          end: booking.end_time,     // Use snake_case
-          color: '#4CAF50', // Default color, can be dynamic based on training element or status
-          // Pass all original booking data (which is now snake_case) into extendedProps for easy access in modal
-          extendedProps: {
-            ...booking,
-            // These keys already match the snake_case format from apiService, so no remapping needed here
-          }
-        }));
+        // Map backend booking structure (now camelCase from apiService) to FullCalendar event structure
+        const formattedEvents = filteredData.map(booking => {
+          // ADDED: console log to inspect each booking object right before mapping
+          console.log("Mapping booking:", booking);
+          return {
+            id: booking.id,
+            title: booking.trainingElementName || 'No Title', // Correctly uses camelCase trainingElementName
+            start: booking.startTime, // FIXED: Use camelCase startTime
+            end: booking.endTime,     // FIXED: Use camelCase endTime
+            color: '#4CAF50', // Default color, can be dynamic based on training element or status
+            // Pass all original booking data (which is now camelCase) into extendedProps for easy access in modal
+            extendedProps: {
+              ...booking,
+            }
+          };
+        });
         setEvents(formattedEvents);
+        console.log("Formatted events for FullCalendar:", formattedEvents); // Debug log
       }
     } catch (err) {
       setError("Failed to load bookings. Please try again.");
@@ -76,11 +86,19 @@ function CalendarPage() {
   }, [user]); // Re-run when user changes
 
 
+  // This useEffect ensures fetchBookings runs once the auth state is determined
+  // and a user is logged in.
   useEffect(() => {
-    if (user) { // Only fetch bookings once user data is available
+    if (isAuthReady && isLoggedIn) {
+      console.log("Auth is ready and user is logged in, initiating fetchBookings..."); // Debug log
       fetchBookings();
+    } else if (isAuthReady && !isLoggedIn) {
+      // If auth is ready but no user is logged in, stop loading and clear events
+      setLoading(false);
+      setEvents([]);
+      setNoBookingsMessage("Please log in to view and manage your training schedule."); // Set a message for non-logged-in users
     }
-  }, [fetchBookings, user]);
+  }, [fetchBookings, isAuthReady, isLoggedIn]);
 
 
   const handleEventClick = (clickInfo) => {
@@ -100,16 +118,17 @@ function CalendarPage() {
     // Triggered when an event is dragged and dropped on the calendar
     const { event } = dropInfo;
     const updatedBookingData = {
-      ...event.extendedProps, // Use existing extendedProps for other fields (already snake_case)
-      start_time: event.startStr, // FullCalendar gives startStr in ISO format
-      end_time: event.endStr,     // FullCalendar gives endStr in ISO format
+      // Use extendedProps, which are already camelCase
+      ...event.extendedProps,
+      // FullCalendar provides startStr/endStr, which are ISO strings, compatible with backend
+      startTime: event.startStr, // FIXED: Use camelCase startTime for update payload
+      endTime: event.endStr,     // FIXED: Use camelCase endTime for update payload
     };
 
     try {
-      await apiService.updateBooking(event.id, updatedBookingData); // CHANGED: Using apiService; transformation handled within apiService
+      await apiService.updateBooking(event.id, updatedBookingData); // apiService will convert camelCase to snake_case for backend
       toast.success(`Booking "${event.title}" moved successfully!`);
-      // No need to call fetchBookings directly, as FullCalendar visually updates,
-      // and we expect the backend's response to confirm the change.
+      // FullCalendar visually updates, and backend response confirms.
       // If backend failure means the change shouldn't stick, you'd revert the event.
     } catch (error) {
       toast.error(error.message || String(error)); // Ensure error is a string
@@ -148,6 +167,20 @@ function CalendarPage() {
     );
   }
 
+  // Conditional rendering: If not logged in, show a message instead of the calendar
+  if (!isLoggedIn) {
+    return (
+      <div className="p-4 md:p-8 w-full max-w-7xl mx-auto">
+        <h1 className="text-3xl font-bold text-gray-800 mb-6 text-center">Training Schedule</h1>
+        <div className="bg-white p-6 rounded-lg shadow-xl text-center">
+          <p className="text-lg text-gray-700">Please log in to view and manage your training schedule.</p>
+          <p className="mt-2 text-md text-gray-500">You can log in or register using the links in the navigation bar.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If logged in, render the FullCalendar and booking modal
   return (
     <div className="p-4 md:p-8 w-full max-w-7xl mx-auto">
       <h1 className="text-3xl font-bold text-gray-800 mb-6 text-center">Training Schedule</h1>
@@ -165,23 +198,31 @@ function CalendarPage() {
           selectMirror={true}
           dayMaxEvents={true}
           weekends={true}
-          events={events} // Now fetching real data
+          events={events} // Now fetching real data (can be empty array if no bookings)
           eventClick={handleEventClick} // Opens modal for editing
           select={handleDateSelect}   // Opens modal for new booking
           eventDrop={handleEventDrop} // Handles event drag-and-drop
           height="auto"
           contentHeight="auto"
           eventContent={(arg) => {
+            // Access camelCase properties from extendedProps
+            const instructorName = arg.event.extendedProps.instructorFirstName && arg.event.extendedProps.instructorLastName
+              ? `${arg.event.extendedProps.instructorFirstName} ${arg.event.extendedProps.instructorLastName}`
+              : null;
+            const studentName = arg.event.extendedProps.studentFirstName && arg.event.extendedProps.studentLastName
+              ? `${arg.event.extendedProps.studentFirstName} ${arg.event.extendedProps.studentLastName}`
+              : null;
+
             return (
               <div className="p-1 text-xs">
                 <b>{arg.timeText}</b>
                 <br />
-                <i>{arg.event.title}</i>
-                {arg.event.extendedProps.instructor_first_name && arg.event.extendedProps.instructor_last_name && (
-                  <div className="text-gray-700">Instr: {arg.event.extendedProps.instructor_first_name} {arg.event.extendedProps.instructor_last_name}</div>
+                <i>{arg.event.title}</i> {/* title is already set from trainingElementName */}
+                {instructorName && (
+                  <div className="text-gray-700">Instr: {instructorName}</div>
                 )}
-                {arg.event.extendedProps.student_first_name && arg.event.extendedProps.student_last_name && (
-                  <div className="text-gray-700">Student: {arg.event.extendedProps.student_first_name} {arg.event.extendedProps.student_last_name}</div>
+                {studentName && (
+                  <div className="text-gray-700">Student: {studentName}</div>
                 )}
               </div>
             );
@@ -203,7 +244,7 @@ function CalendarPage() {
         isOpen={isModalOpen}
         onClose={handleModalClose}
         initialData={selectedBooking || selectedDateRange}
-        onBookingSuccess={handleBookingSuccess}
+        onSaveSuccess={handleBookingSuccess}
       />
     </div>
   );

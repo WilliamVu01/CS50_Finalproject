@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
 from flask_login import login_required
+from flask_cors import cross_origin
 
 from app.extensions import db
 from itls.decorators import roles_required
@@ -42,9 +43,11 @@ def get_training_element():
         print(f"Error fetching training elements:  {e}")
         return jsonify(message="Internal server error", error=str(e)), 500
 
+
 # Create new training element for admins/user
     # Requires 'name', 'description', 'duration_minutes', 'session_type'
 @training_elements_bp.route('/', methods=["POST"], strict_slashes=False)
+@cross_origin(supports_credentials=True, origins=["http://127.0.0.1:5173", "http://localhost:5173"]) # Create by AI: Add cross_origin decorator to handle preflight
 @login_required
 @roles_required('admin', 'instructor')
 def create_training_element():
@@ -94,7 +97,17 @@ def create_training_element():
         db.session.rollback()
         print(f"Error in creating new training element")
         return jsonify(message="Internal sever error", error=str(e))
-    
+# Endpoint to get allowed session types, it will allow fontend to show in the dropdown
+@training_elements_bp.route('/session_types', methods=["GET"], strict_slashes=False)
+def get_session_types():
+    try:
+        # Dynamically get enum values from the TrainingElement model
+        session_types_enum = TrainingElement.session_type.type.enums
+        return jsonify(session_types_enum), 200
+    except Exception as e:
+        print(f"Error fetching session types: {e}")
+        return jsonify(message="Internal server error", error=str(e)), 500
+        
 # Manage training elements for instructors & admins
 # Retrieve training element information
 @training_elements_bp.route('/<int:element_id>', methods=["GET"], strict_slashes=False)

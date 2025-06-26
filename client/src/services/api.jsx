@@ -1,8 +1,40 @@
+// client/src/services/api.jsx
 import axios from 'axios';
+
+// Helper function to transform object keys from camelCase to snake_case for backend
+const toSnakeCase = (obj) => {
+  if (obj === null || typeof obj !== 'object') {
+    return obj;
+  }
+  if (Array.isArray(obj)) {
+    return obj.map(toSnakeCase);
+  }
+  return Object.keys(obj).reduce((acc, key) => {
+    const snakeKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
+    acc[snakeKey] = toSnakeCase(obj[key]);
+    return acc;
+  }, {});
+};
+
+// Helper function to transform object keys from snake_case to camelCase for frontend
+const toCamelCase = (obj) => {
+  if (obj === null || typeof obj !== 'object') {
+    return obj;
+  }
+  if (Array.isArray(obj)) {
+    return obj.map(toCamelCase);
+  }
+  return Object.keys(obj).reduce((acc, key) => {
+    const camelKey = key.replace(/_([a-z])/g, (g) => g[1].toUpperCase());
+    acc[camelKey] = toCamelCase(obj[key]);
+    return acc;
+  }, {});
+};
+
 
 // Create an Axios instance with credentials for session cookies
 const api = axios.create({
-  baseURL: 'http://localhost:5000/api', // IMPORTANT: Ensure this matches your Flask backend URL
+  baseURL: 'http://127.0.0.1:5000/api',
   withCredentials: true, // Important for sending/receiving session cookies with Flask-Login
   headers: {
     'Content-Type': 'application/json',
@@ -10,146 +42,152 @@ const api = axios.create({
   },
 });
 
-// Helper function to transform camelCase keys (from backend responses) to snake_case for frontend consistency
-const toSnakeCase = (obj) => {
-  if (obj === null || typeof obj !== 'object' || obj instanceof Date) {
-    return obj;
-  }
-  if (Array.isArray(obj)) {
-    return obj.map(v => toSnakeCase(v));
-  }
-  return Object.keys(obj).reduce((acc, key) => {
-    const snakeKey = key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
-    acc[snakeKey] = toSnakeCase(obj[key]);
-    return acc;
-  }, {});
-};
-
-
-const apiService = {
-  // --- Authentication API functions ---
-  loginUser: async (email, password) => {
-    try {
-      const response = await api.post('/auth/login', { email, password });
-      return response.data;
-    } catch (error) {
-      throw error.response?.data?.message || 'Login failed';
+// Add a request interceptor to transform outgoing data to snake_case
+api.interceptors.request.use(
+  (config) => {
+    if (config.data) {
+      config.data = toSnakeCase(config.data);
     }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// Add a response interceptor to transform incoming data to camelCase
+api.interceptors.response.use(
+  (response) => {
+    if (response.data) {
+      response.data = toCamelCase(response.data);
+    }
+    return response;
+  },
+  (error) => {
+    // Error handling logic
+    let errorMessage = 'An unexpected error occurred.';
+    if (error.response) {
+      // Server responded with a status other than 2xx
+      console.error('API Error Response:', error.response.data);
+      console.error('Status:', error.response.status);
+      console.error('Headers:', error.response.headers);
+      errorMessage = error.response.data.message || error.response.data.error || errorMessage;
+      if (error.response.status === 401) {
+        errorMessage = errorMessage || 'Unauthorized: Login required.';
+      } else if (error.response.status === 403) {
+        errorMessage = errorMessage || 'Forbidden: You do not have permission to perform this action.';
+      } else if (error.response.status === 400) {
+        errorMessage = errorMessage || 'Bad Request: Please check your input.';
+      } else if (error.response.status === 409) {
+        errorMessage = errorMessage || 'Conflict: Resource already exists or conflict occurred.';
+      }
+    } else if (error.request) {
+      // Request was made but no response received
+      console.error('API Error Request:', error.request);
+      errorMessage = 'No response from server. Please check your internet connection or server status.';
+    } else {
+      // Something happened in setting up the request that triggered an Error
+      console.error('API Error Message:', error.message);
+      errorMessage = error.message;
+    }
+    // Propagate the error message for toast notifications in components
+    return Promise.reject(errorMessage);
+  }
+);
+
+
+// Define API service methods
+const apiService = {
+  // Auth Endpoints
+  loginUser: async (email, password) => {
+    const response = await api.post('/auth/login', { email, password });
+    return response.data; // Return data directly, it's already camelCase
   },
 
   registerUser: async (userData) => {
-    try {
-      const response = await api.post('/auth/register', userData);
-      return response.data;
-    } catch (error) {
-      throw error.response?.data?.message || 'Registration failed';
-    }
+    const response = await api.post('/auth/register', userData);
+    return response.data; // Return data directly, it's already camelCase
   },
 
   logoutUser: async () => {
-    try {
-      const response = await api.post('/auth/logout');
-      return response.data;
-    } catch (error) {
-      throw error.response?.data?.message || 'Logout failed';
-    }
+    const response = await api.post('/auth/logout');
+    return response.data; // Return data directly
   },
 
   getCurrentUser: async () => {
     try {
       const response = await api.get('/auth/current_user');
-      return response.data;
+      return response.data; // This should return the user object or null
     } catch (error) {
-      if (error.response && error.response.status === 401) {
-        return null;
-      }
-      console.error("Error fetching current user:", error);
-      throw error.response?.data?.message || 'Failed to fetch current user';
+      // If 401 on current_user, it means not logged in, which is expected behavior for this endpoint
+      console.warn("getCurrentUser failed, likely not logged in:", error);
+      return null; // Return null if not logged in
     }
   },
 
-  // --- Bookings API functions ---
-  getBookings: async (params = {}) => {
-    try {
-      const response = await api.get('/bookings', { params: params });
-      return response.data.map(booking => toSnakeCase(booking));
-    } catch (error) {
-      throw error.response?.data?.message || 'Failed to fetch bookings';
-    }
+  // User Management
+  getUsers: async () => {
+    const response = await api.get('/users');
+    return response.data;
+  },
+  getUser: async (id) => {
+    const response = await api.get(`/users/${id}`);
+    return response.data;
+  },
+  updateUser: async (id, userData) => {
+    const response = await api.put(`/users/${id}`, userData);
+    return response.data;
+  },
+  deleteUser: async (id) => {
+    const response = await api.delete(`/users/${id}`);
+    return response.data;
   },
 
-  createBooking: async (bookingData) => {
-    try {
-      const response = await api.post('/bookings', bookingData);
-      return response.data;
-    } catch (error) {
-      throw error.response?.data?.message || 'Failed to create booking';
-    }
+  // Training Element Management
+  getTrainingElements: async () => {
+    const response = await api.get('/training_elements');
+    return response.data;
   },
-
-  updateBooking: async (bookingId, bookingData) => {
-    try {
-      const response = await api.put(`/bookings/${bookingId}`, bookingData);
-      return response.data;
-    } catch (error) {
-      throw error.response?.data?.message || 'Failed to update booking';
-    }
+  getTrainingElement: async (id) => {
+    const response = await api.get(`/training_elements/${id}`);
+    return response.data;
   },
-
-  deleteBooking: async (bookingId) => {
-    try {
-      const response = await api.delete(`/bookings/${bookingId}`);
-      return response.data;
-    } catch (error) {
-      throw error.response?.data?.message || 'Failed to delete booking';
-    }
-  },
-
-  // --- Users API functions (for dropdowns) ---
-  getUsers: async (params = {}) => {
-    try {
-      const response = await api.get('/users', { params: params });
-      return response.data.map(user => toSnakeCase(user));
-    } catch (error) {
-      throw error.response?.data?.message || 'Failed to fetch users';
-    }
-  },
-
-  // --- Training Elements API functions ---
-  getTrainingElements: async (params = {}) => {
-    try {
-      const response = await api.get('/training-elements', { params: params });
-      return response.data.map(element => toSnakeCase(element));
-    } catch (error) {
-      throw error.response?.data?.message || 'Failed to fetch training elements';
-    }
-  },
-
   createTrainingElement: async (elementData) => {
-    try {
-      const response = await api.post('/training-elements', elementData);
-      return response.data;
-    } catch (error) {
-      throw error.response?.data?.message || 'Failed to create training element';
-    }
+    const response = await api.post('/training_elements', elementData);
+    return response.data;
+  },
+  updateTrainingElement: async (id, elementData) => {
+    const response = await api.put(`/training_elements/${id}`, elementData);
+    return response.data;
+  },
+  deleteTrainingElement: async (id) => {
+    const response = await api.delete(`/training_elements/${id}`);
+    return response.data;
+  },
+  // NEW: Method to fetch allowed session types
+  getTrainingSessionTypes: async () => {
+    const response = await api.get('/training_elements/session_types');
+    return response.data; // This should be an array of strings
   },
 
-  updateTrainingElement: async (elementId, elementData) => {
-    try {
-      const response = await api.put(`/training-elements/${elementId}`, elementData);
-      return response.data;
-    } catch (error) {
-      throw error.response?.data?.message || 'Failed to update training element';
-    }
+  // Booking Management
+  getBookings: async () => {
+    const response = await api.get('/bookings');
+    return response.data;
   },
-
-  deleteTrainingElement: async (elementId) => {
-    try {
-      const response = await api.delete(`/training-elements/${elementId}`);
-      return response.data;
-    } catch (error) {
-      throw error.response?.data?.message || 'Failed to delete training element';
-    }
+  getBooking: async (id) => {
+    const response = await api.get(`/bookings/${id}`);
+    return response.data;
+  },
+  createBooking: async (bookingData) => {
+    const response = await api.post('/bookings', bookingData);
+    return response.data;
+  },
+  updateBooking: async (id, bookingData) => {
+    const response = await api.put(`/bookings/${id}`, bookingData);
+    return response.data;
+  },
+  deleteBooking: async (id) => {
+    const response = await api.delete(`/bookings/${id}`);
+    return response.data;
   },
 };
 

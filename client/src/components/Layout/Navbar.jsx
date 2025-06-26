@@ -1,3 +1,4 @@
+// src/components/Layout/Navbar.jsx
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -24,26 +25,24 @@ function Navbar() {
     <nav className="bg-gray-800 p-4 shadow-md">
       <div className="container mx-auto flex justify-between items-center">
         {/* Brand logo/name - links to the Calendar page (which is the index route) */}
-        <Link to="/" className="text-white text-xl font-bold">
+        <Link to="/home" className="text-white text-xl font-bold pr-16">
           Training Scheduler
         </Link>
         <div className="flex items-center space-x-4">
           {user ? (
             <>
               {/* Welcome message for logged-in users */}
-              <span className="text-gray-300">Welcome, {user.first_name}! ({user.role})</span>
+              {/* MINIMUM CHANGE: Changed user.first_name to user.firstName */}
+              <span className="text-gray-300">Welcome, {user.firstName}! ({user.role})</span>
 
               {/* Navigation links for logged-in users */}
-              <Link to="/home" className="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium">
-                Home
-              </Link>
               <Link to="/dashboard" className="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium">
                 Dashboard
               </Link>
               <Link to="/" className="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium">
                 Calendar
               </Link>
-              
+
               {/* Conditional link for Manage Elements (Admin/Instructor roles) */}
               {(user.role === 'admin' || user.role === 'instructor') && (
                 <Link to="/manage-elements" className="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium">

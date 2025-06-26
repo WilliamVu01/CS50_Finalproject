@@ -1,3 +1,4 @@
+// client/src/components/Bookings/BookingModal.jsx
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import apiService from '../../services/api';
@@ -23,7 +24,7 @@ const Modal = ({ isOpen, onClose, children }) => {
   );
 };
 
-function BookingFormModal({ isOpen, onClose, initialData, onSaveSuccess }) {
+function BookingModal({ isOpen, onClose, initialData, onSaveSuccess }) {
   const [formData, setFormData] = useState({
     training_element_id: '',
     instructor_id: '',
@@ -36,6 +37,7 @@ function BookingFormModal({ isOpen, onClose, initialData, onSaveSuccess }) {
   const [users, setUsers] = useState([]); // Will fetch all users and filter by role
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [selectedTrainingElementSessionType, setSelectedTrainingElementSessionType] = useState(''); // State for session type display
 
   useEffect(() => {
     const fetchData = async () => {
@@ -56,6 +58,15 @@ function BookingFormModal({ isOpen, onClose, initialData, onSaveSuccess }) {
             end_time: initialData.end_time ? new Date(initialData.end_time) : null,
             notes: initialData.notes || '',
           });
+
+          // Ensure session type is set for initial data
+          const initialElement = elements.find(el => el.id === (initialData.training_element_id || initialData.trainingElementId));
+          // Use initialData.training_element_id first, fallback to trainingElementId from CalendarPage's extendedProps
+          if (initialElement) {
+            setSelectedTrainingElementSessionType(initialElement.sessionType);
+          } else {
+            setSelectedTrainingElementSessionType(''); // Clear if no element found
+          }
         } else {
           // Reset form for new booking
           setFormData({
@@ -66,6 +77,7 @@ function BookingFormModal({ isOpen, onClose, initialData, onSaveSuccess }) {
             end_time: null,
             notes: '',
           });
+          setSelectedTrainingElementSessionType(''); // Clear for new booking
         }
       } catch (error) {
         toast.error(error.message || 'Failed to load data for booking form.');
@@ -78,11 +90,17 @@ function BookingFormModal({ isOpen, onClose, initialData, onSaveSuccess }) {
     if (isOpen) {
       fetchData();
     }
-  }, [isOpen, initialData]);
+  }, [isOpen, initialData]); // initialData is a dependency because we need to re-run if it changes (e.g., from creating to editing)
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+
+    // Update session type display when training element is selected
+    if (name === 'training_element_id') {
+      const selectedElement = trainingElements.find(element => element.id === parseInt(value));
+      setSelectedTrainingElementSessionType(selectedElement ? selectedElement.sessionType : '');
+    }
   };
 
   const handleDateChange = (date, name) => {
@@ -200,6 +218,12 @@ function BookingFormModal({ isOpen, onClose, initialData, onSaveSuccess }) {
   const instructors = users.filter(user => user.role === 'instructor' || user.role === 'admin');
   const students = users.filter(user => user.role === 'student' || user.role === 'admin'); // Admin can be a student too
 
+  // Function to format session type for display
+  const formatSessionType = (type) => {
+    if (!type) return '';
+    return type.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase());
+  };
+
   return (
     <Modal isOpen={isOpen} onClose={onClose}>
       <h2 className="text-2xl font-bold mb-4 text-gray-800 text-center">
@@ -221,10 +245,25 @@ function BookingFormModal({ isOpen, onClose, initialData, onSaveSuccess }) {
             <option value="">Select Training Element</option>
             {trainingElements.map((element) => (
               <option key={element.id} value={element.id}>
-                {element.name} ({element.duration_minutes} min)
+                {element.name} ({element.durationMinutes} min)
               </option>
             ))}
           </select>
+        </div>
+
+        {/* FIXED: Removed conditional rendering, Session Type is now always visible */}
+        <div>
+          <label htmlFor="session_type_display" className="block text-sm font-medium text-gray-700 text-left">
+            Session Type:
+          </label>
+          <input
+            type="text"
+            id="session_type_display"
+            // Display 'N/A' or an empty string if no session type is selected/found
+            value={selectedTrainingElementSessionType ? formatSessionType(selectedTrainingElementSessionType) : 'N/A'}
+            readOnly
+            className="mt-1 block w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md shadow-sm sm:text-sm"
+          />
         </div>
 
         <div>
@@ -242,7 +281,7 @@ function BookingFormModal({ isOpen, onClose, initialData, onSaveSuccess }) {
             <option value="">Select Instructor</option>
             {instructors.map((user) => (
               <option key={user.id} value={user.id}>
-                {user.first_name} {user.last_name}
+                {user.firstName} {user.lastName}
               </option>
             ))}
           </select>
@@ -263,7 +302,7 @@ function BookingFormModal({ isOpen, onClose, initialData, onSaveSuccess }) {
             <option value="">Select Student</option>
             {students.map((user) => (
               <option key={user.id} value={user.id}>
-                {user.first_name} {user.last_name}
+                {user.firstName} {user.lastName}
               </option>
             ))}
           </select>
@@ -336,4 +375,4 @@ function BookingFormModal({ isOpen, onClose, initialData, onSaveSuccess }) {
   );
 }
 
-export default BookingFormModal;
+export default BookingModal;

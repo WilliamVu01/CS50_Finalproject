@@ -31,7 +31,8 @@ def create_app(config_object='config.DevelopmentConfig'): # ADDED config_object 
     # Configure CORS - allows your React frontend to make requests
     # Adjust origins as needed for production (e.g., your frontend domain)
     # The `supports_credentials=True` is important for session cookies with Flask-Login
-    CORS(app, supports_credentials=True, origins=["http://localhost:5173", "http://127.0.0.1:5000"])
+      # For Prod: CORS(app, supports_credentials=True, origins=["http://localhost:5173", "http://127.0.0.1:5000"])
+    CORS(app, supports_credentials=True) # For dev to resolve issue
 
     # Configure Flask-Login's user loader
 

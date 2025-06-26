@@ -26,11 +26,11 @@ const Modal = ({ isOpen, onClose, children }) => {
 
 function BookingModal({ isOpen, onClose, initialData, onSaveSuccess }) {
   const [formData, setFormData] = useState({
-    training_element_id: '',
-    instructor_id: '',
-    student_id: '',
-    start_time: null,
-    end_time: null,
+    training_element_id: '', // This will be set from initialData.trainingElementId
+    instructor_id: '',       // This will be set from initialData.instructorId
+    student_id: '',          // This will be set from initialData.studentId
+    start_time: null,        // This will be set from initialData.startTime
+    end_time: null,          // This will be set from initialData.endTime
     notes: '',
   });
   const [trainingElements, setTrainingElements] = useState([]);
@@ -49,19 +49,21 @@ function BookingModal({ isOpen, onClose, initialData, onSaveSuccess }) {
         setUsers(fetchedUsers);
 
         if (initialData) {
-          // Parse string dates to Date objects for DatePicker
+          // FIXED: Use camelCase properties from initialData (extendedProps from FullCalendar)
+          // The values for select dropdowns (training_element_id, instructor_id, student_id)
+          // need to be set using their camelCase counterparts from initialData.
+          // Date objects are parsed correctly.
           setFormData({
-            training_element_id: initialData.training_element_id || '',
-            instructor_id: initialData.instructor_id || '',
-            student_id: initialData.student_id || '',
-            start_time: initialData.start_time ? new Date(initialData.start_time) : null,
-            end_time: initialData.end_time ? new Date(initialData.end_time) : null,
+            training_element_id: initialData.trainingElementId || '', // Corrected to use camelCase
+            instructor_id: initialData.instructorId || '',           // Corrected to use camelCase
+            student_id: initialData.studentId || '',                 // Corrected to use camelCase
+            start_time: initialData.startTime ? new Date(initialData.startTime) : null, // Corrected to use camelCase
+            end_time: initialData.endTime ? new Date(initialData.endTime) : null,       // Corrected to use camelCase
             notes: initialData.notes || '',
           });
 
-          // Ensure session type is set for initial data
-          const initialElement = elements.find(el => el.id === (initialData.training_element_id || initialData.trainingElementId));
-          // Use initialData.training_element_id first, fallback to trainingElementId from CalendarPage's extendedProps
+          // Ensure session type is set for initial data based on the correct trainingElementId
+          const initialElement = elements.find(el => el.id === initialData.trainingElementId);
           if (initialElement) {
             setSelectedTrainingElementSessionType(initialElement.sessionType);
           } else {
@@ -124,6 +126,9 @@ function BookingModal({ isOpen, onClose, initialData, onSaveSuccess }) {
     }
 
     // Prepare data for backend (send dates in ISO format)
+    // The formData state holds training_element_id, instructor_id, student_id in snake_case strings
+    // and start_time, end_time as Date objects.
+    // apiService will handle conversion to snake_case for the backend.
     const dataToSend = {
       ...formData,
       start_time: formData.start_time ? formData.start_time.toISOString() : null,
@@ -220,7 +225,7 @@ function BookingModal({ isOpen, onClose, initialData, onSaveSuccess }) {
 
   // Function to format session type for display
   const formatSessionType = (type) => {
-    if (!type) return '';
+    if (!type) return 'N/A';
     return type.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase());
   };
 
@@ -251,7 +256,7 @@ function BookingModal({ isOpen, onClose, initialData, onSaveSuccess }) {
           </select>
         </div>
 
-        {/* FIXED: Removed conditional rendering, Session Type is now always visible */}
+        {/* Removed conditional rendering, Session Type is now always visible */}
         <div>
           <label htmlFor="session_type_display" className="block text-sm font-medium text-gray-700 text-left">
             Session Type:

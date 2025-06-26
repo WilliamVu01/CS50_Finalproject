@@ -1,15 +1,57 @@
 // client/src/pages/CalendarPage.jsx
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import { toast } from 'react-hot-toast';
 
-// FIXED: Corrected import path for apiService
-import apiService from '../services/api';
 import BookingModal from '../components/Bookings/BookingModal'; // Import BookingModal
+import apiService from '../services/api'; // Import apiService to fetch real bookings
 import { useAuth } from '../context/AuthContext'; // Import useAuth to get user role
+
+// Define a larger and more visually distinct palette of colors for events
+const EVENT_COLORS_PALETTE = [
+  '#4CAF50', // Green
+  '#2196F3', // Blue
+  '#FFC107', // Amber
+  '#E91E63', // Pink
+  '#9C27B0', // Purple
+  '#00BCD4', // Cyan
+  '#FF5722', // Deep Orange
+  '#795548', // Brown
+  '#673AB7', // Deep Purple
+  '#CDDC39', // Lime
+  '#F44336', // Red
+  '#607D8B', // Blue Grey
+  '#8BC34A', // Light Green
+  '#03A9F4', // Light Blue
+  '#FF9800', // Orange
+];
+
+// We'll use a ref to store the color mapping, so it persists across renders
+// but doesn't trigger re-renders itself.
+// This map will store: trainingElementId -> assignedColor
+const colorMap = new Map();
+let colorIndex = 0; // Tracks the next color to assign from the palette
+
+const getUniqueColorForTrainingElement = (trainingElementId) => {
+  if (typeof trainingElementId !== 'number' || trainingElementId === null) {
+    console.warn("Invalid trainingElementId provided for color assignment:", trainingElementId);
+    return '#A0A0A0'; // Default grey for invalid IDs
+  }
+
+  // If we've already assigned a color to this trainingElementId, return it
+  if (colorMap.has(trainingElementId)) {
+    return colorMap.get(trainingElementId);
+  }
+
+  // Otherwise, assign a new color from the palette
+  const assignedColor = EVENT_COLORS_PALETTE[colorIndex % EVENT_COLORS_PALETTE.length];
+  colorMap.set(trainingElementId, assignedColor); // Store the assignment
+  colorIndex++; // Move to the next color for the next unique ID
+  return assignedColor;
+};
 
 function CalendarPage() {
   // Get the current user, auth readiness, and login status from AuthContext
@@ -57,19 +99,32 @@ function CalendarPage() {
         setEvents([]); // Ensure events array is empty
       } else {
         setNoBookingsMessage(''); // Clear message if bookings are found
+        // Reset color mapping and index on fresh data fetch to re-assign colors cleanly
+        colorMap.clear();
+        colorIndex = 0;
+
         // Map backend booking structure (now camelCase from apiService) to FullCalendar event structure
         const formattedEvents = filteredData.map(booking => {
-          // ADDED: console log to inspect each booking object right before mapping
-          console.log("Mapping booking:", booking);
+          console.log("DEBUG: Booking for color assignment:", {
+            id: booking.id,
+            trainingElementId: booking.trainingElementId,
+            trainingElementName: booking.trainingElementName,
+            // Include other relevant props if needed for more context
+          });
+
+          // Assign color based on booking.trainingElementId for consistent coloring per training element
+          const color = getUniqueColorForTrainingElement(booking.trainingElementId);
+          console.log(`Assigned color for trainingElementId ${booking.trainingElementId}: ${color}`); // Log the assigned color
           return {
             id: booking.id,
-            title: booking.trainingElementName || 'No Title', // Correctly uses camelCase trainingElementName
-            start: booking.startTime, // FIXED: Use camelCase startTime
-            end: booking.endTime,     // FIXED: Use camelCase endTime
-            color: '#4CAF50', // Default color, can be dynamic based on training element or status
+            title: booking.trainingElementName || 'No Title',
+            start: booking.startTime,
+            end: booking.endTime,
+            color: color, // Use the assigned color for FullCalendar's internal use
             // Pass all original booking data (which is now camelCase) into extendedProps for easy access in modal
             extendedProps: {
               ...booking,
+              assignedColor: color, // Store the assigned color in extendedProps for eventContent
             }
           };
         });
@@ -121,8 +176,8 @@ function CalendarPage() {
       // Use extendedProps, which are already camelCase
       ...event.extendedProps,
       // FullCalendar provides startStr/endStr, which are ISO strings, compatible with backend
-      startTime: event.startStr, // FIXED: Use camelCase startTime for update payload
-      endTime: event.endStr,     // FIXED: Use camelCase endTime for update payload
+      startTime: event.startStr, // Use camelCase startTime for update payload
+      endTime: event.endStr,     // Use camelCase endTime for update payload
     };
 
     try {
@@ -214,7 +269,8 @@ function CalendarPage() {
               : null;
 
             return (
-              <div className="p-1 text-xs">
+              // FIXED: Apply background color directly using style prop
+              <div className="p-1 text-xs" style={{ backgroundColor: arg.event.extendedProps.assignedColor || '#A0A0A0', borderRadius: '4px', overflow: 'hidden' }}>
                 <b>{arg.timeText}</b>
                 <br />
                 <i>{arg.event.title}</i> {/* title is already set from trainingElementName */}
